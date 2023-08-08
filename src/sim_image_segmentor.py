@@ -16,14 +16,16 @@ blue = np.array([40, 40, 255])
 orange = np.array([255, 140, 67])
 red = np.array([253, 39, 39])
 yellow = np.array([255, 255, 41])
+teal = np.array([42, 254, 255])
 
 purple_hsv = matplotlib.colors.rgb_to_hsv(purple.astype(float)/255)
 blue_hsv = matplotlib.colors.rgb_to_hsv(blue.astype(float)/255)
 orange_hsv = matplotlib.colors.rgb_to_hsv(orange.astype(float)/255)
 red_hsv = matplotlib.colors.rgb_to_hsv(red.astype(float)/255)
 yellow_hsv = matplotlib.colors.rgb_to_hsv(yellow.astype(float)/255)
+teal_hsv = matplotlib.colors.rgb_to_hsv(teal.astype(float)/255)
 
-hsv_colors = np.vstack((purple_hsv, blue_hsv, orange_hsv, red_hsv, yellow_hsv))
+hsv_colors = np.vstack((purple_hsv, blue_hsv, orange_hsv, red_hsv, yellow_hsv, teal_hsv))
 
 bg_color = np.array([0.64, 0.86, 0.91])
 bg_hsv = matplotlib.colors.rgb_to_hsv(bg_color.astype(float))
@@ -59,12 +61,13 @@ class ImageSegmentor:
         seg_inds = np.argwhere(min_dists < self.hsv_thresh)[:, 0] #hsv_image_reshape.shape[0]
         
         #now do bg segmentation
-        dists = np.linalg.norm(hsv_image_reshape - bg_hsv, axis=1) #hsv_image_reshape.shape[0]
-        bg_inds = np.argwhere(dists < self.bg_thresh)[:, 0]
+        #commenting out for now
+        #dists = np.linalg.norm(hsv_image_reshape - bg_hsv, axis=1) #hsv_image_reshape.shape[0]
+        #bg_inds = np.argwhere(dists < self.bg_thresh)[:, 0]
 
 
         seg_ids = np.zeros((hsv_image_reshape.shape[0]), dtype=np.uint8) - 1
-        seg_ids[bg_inds] = 254
+        #seg_ids[bg_inds] = 254
         seg_ids[seg_inds] = min_inds[seg_inds]
 
         seg_ids = seg_ids.reshape(n_rows, n_cols)
