@@ -43,7 +43,6 @@ include_directories(
 
 #Set source files to compile
 # set(POINTCLOUD_SRC_FILES
-#   src/pointcloudUtils.cpp
 # )
 
 #below we will see a few of these.
