@@ -3,11 +3,13 @@
 
 <arg name="hsv_thresh" default="0.15"/>
 <arg name="bg_thresh" default="0.15"/>
+<arg name="min_area" default="100"/>
 <arg name="shuffle_seg" default="true"/>
 
 <node pkg="pointcloud" type="sim_image_segmentor.py" name="fruitlet_segment_node" output="screen">
     <param name="hsv_thresh" type="double" value="$(arg hsv_thresh)" />
     <param name="bg_thresh" type="double" value="$(arg bg_thresh)" />
+    <param name="min_area" type="int" value="$(arg min_area)" />
     <param name="shuffle_seg" type="boolean" value="$(arg shuffle_seg)" />
 </node>
 </launch>

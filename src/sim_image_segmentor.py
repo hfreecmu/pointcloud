@@ -31,10 +31,11 @@ bg_color = np.array([0.64, 0.86, 0.91])
 bg_hsv = matplotlib.colors.rgb_to_hsv(bg_color.astype(float))
 
 class ImageSegmentor:
-    def __init__(self, pub, hsv_thresh, bg_thresh, shuffle_seg):
+    def __init__(self, pub, hsv_thresh, bg_thresh, min_area, shuffle_seg):
         self.pub = pub
         self.hsv_thresh = hsv_thresh
         self.bg_thresh = bg_thresh
+        self.min_area = min_area
         self.bridge = CvBridge()
         self.shuffle_seg = shuffle_seg
         self.hsv_colors = hsv_colors
@@ -71,6 +72,18 @@ class ImageSegmentor:
         seg_ids[seg_inds] = min_inds[seg_inds]
 
         seg_ids = seg_ids.reshape(n_rows, n_cols)
+
+        #TODO not usre if this will help
+        unique_ids = np.unique(seg_ids)
+        for id in unique_ids:
+            if id == 255:
+                continue
+
+            seg_inds = np.argwhere(seg_ids == id)
+            if seg_inds.shape[0] < self.min_area:
+                seg_ids[seg_inds[:, 0], seg_inds[:, 1]] = 255
+        #
+
         seg_id_msg = self.bridge.cv2_to_imgmsg(seg_ids)
         seg_id_msg.header = ros_image.header
 
@@ -84,11 +97,12 @@ def run_segmentor_service():
 
     hsv_thresh = rospy.get_param("~hsv_thresh")
     bg_thresh = rospy.get_param("~bg_thresh")
+    min_area = rospy.get_param("~min_area")
     shuffle_seg = rospy.get_param("~shuffle_seg")
 
     pub = rospy.Publisher('/segmented_image', Image, queue_size=5)
 
-    segmentor = ImageSegmentor(pub, hsv_thresh, bg_thresh, shuffle_seg)
+    segmentor = ImageSegmentor(pub, hsv_thresh, bg_thresh, min_area, shuffle_seg)
 
     sub = rospy.Subscriber('/theia/left/image_rect_color', Image, segmentor.segment_image, queue_size=5)
 
