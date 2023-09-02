@@ -1,12 +1,45 @@
 <!-- xml version="1.0"? -->
 <launch>
 
+<arg name="use_depth_discon"/>
+<arg name="sim"/>
+
 <arg name="min_disparity" default="0"/>
+<!-- This is 0.6 in post proc -->
 <arg name="max_range" default="2.0"/>
 
-<!-- Currently setup for gazebo calibration -->
-<node pkg="pointcloud" type="pointcloud_node" name="pointcloud_node" output="screen">
-    <param name="min_disparity" type="int" value="$(arg min_disparity)" />
-    <param name="max_range" type="double" value="$(arg max_range)" />
-</node>
+<arg name="bilateral_filter" unless="$(arg sim)" value="true"/>
+<arg name="bilateral_filter" if="$(arg sim)" value="false" />
+
+<arg name="bilateral_d" default="9"/>
+<arg name="bilateral_sc" default="0.03"/>
+<arg name="bilateral_ss" default="4.5"/>
+<arg name="disc_use_rat" default="true"/>
+<arg name="disc_rat_thresh" default="0.004"/>
+<arg name="disc_dist_thresh" default="0.001"/>
+<arg name="z_only" default="false"/>
+
+<group if="$(eval use_depth_discon)">
+    <node pkg="pointcloud" type="pointcloud_node.py" name="pointcloud_node" output="screen">
+        <param name="min_disparity" type="int" value="$(arg min_disparity)" />
+        <param name="max_range" type="double" value="$(arg max_range)" />
+
+        <param name="bilateral_filter" type="bool" value="$(arg bilateral_filter)" />
+        <param name="bilateral_d" type="int" value="$(arg bilateral_d)" />
+        <param name="bilateral_sc" type="double" value="$(arg bilateral_sc)" />
+        <param name="bilateral_ss" type="double" value="$(arg bilateral_ss)" />
+        <param name="disc_use_rat" type="bool" value="$(arg disc_use_rat)" />
+        <param name="disc_rat_thresh" type="double" value="$(arg disc_rat_thresh)" />
+        <param name="disc_dist_thresh" type="double" value="$(arg disc_dist_thresh)" />
+        <param name="z_only" type="bool" value="$(arg z_only)" />
+    </node>
+</group>
+
+<group unless="$(eval use_depth_discon)">
+    <node pkg="pointcloud" type="pointcloud_node" name="pointcloud_node" output="screen">
+        <param name="min_disparity" type="int" value="$(arg min_disparity)" />
+        <param name="max_range" type="double" value="$(arg max_range)" />
+    </node>
+</group>
+
 </launch>

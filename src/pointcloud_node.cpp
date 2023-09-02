@@ -185,7 +185,6 @@ int main(int argc, char** argv){
     std::string rightInfoTopic = "/theia/right/camera_info";
     std::string disparityTopic = "/disparity_image";
 
-    //made all queue sizes 5 or else messsages weren't received, not sure why
     message_filters::Subscriber<sensor_msgs::Image> leftImageSub(nh, leftImageTopic, 1);
     message_filters::Subscriber<sensor_msgs::CameraInfo> rightInfoSub(nh, rightInfoTopic, 1);
     message_filters::Subscriber<sensor_msgs::Image> disparitySub(nh, disparityTopic, 1);
