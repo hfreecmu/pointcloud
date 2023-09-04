@@ -2,10 +2,13 @@
 
 import numpy as np
 import matplotlib.colors
+from sklearn.cluster import DBSCAN
 
 import rospy
 from cv_bridge import CvBridge
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, PointCloud2
+import message_filters
+import ros_numpy
 
 #TODO ultiamtely do this in c++, just easier here for now
 
@@ -31,7 +34,8 @@ bg_color = np.array([0.64, 0.86, 0.91])
 bg_hsv = matplotlib.colors.rgb_to_hsv(bg_color.astype(float))
 
 class ImageSegmentor:
-    def __init__(self, pub, hsv_thresh, bg_thresh, min_area, shuffle_seg):
+    def __init__(self, pub, hsv_thresh, bg_thresh, min_area, shuffle_seg,
+                 db_eps, db_min_samples):
         self.pub = pub
         self.hsv_thresh = hsv_thresh
         self.bg_thresh = bg_thresh
@@ -39,12 +43,18 @@ class ImageSegmentor:
         self.bridge = CvBridge()
         self.shuffle_seg = shuffle_seg
         self.hsv_colors = hsv_colors
+        self.db_eps = db_eps
+        self.db_min_samples = db_min_samples
 
-    def segment_image(self, ros_image):
+    def segment_image(self, ros_image, ros_point_cloud):
         rospy.loginfo('segmenting image')
 
         image = self.bridge.imgmsg_to_cv2(ros_image, desired_encoding='rgb8')
         n_rows, n_cols, _ = image.shape
+
+        cam_points = ros_numpy.numpify(ros_point_cloud)
+        cam_points = np.stack((cam_points['x'], cam_points['y'], cam_points['z']), axis=2)
+        cam_points = cam_points.reshape((image.shape[0], image.shape[1], 3))
 
         hsv_image = matplotlib.colors.rgb_to_hsv(image.astype(float)/255)
         hsv_image_reshape = hsv_image.reshape(-1, 3)
@@ -73,18 +83,41 @@ class ImageSegmentor:
 
         seg_ids = seg_ids.reshape(n_rows, n_cols)
 
-        #TODO not usre if this will help
+        #TODO not sure if min thresh will help
         unique_ids = np.unique(seg_ids)
+        clustered_seg_ids = np.zeros(seg_ids.shape, dtype=np.uint8) - 1
+        curr_id = 0
         for id in unique_ids:
             if id == 255:
                 continue
 
             seg_inds = np.argwhere(seg_ids == id)
-            if seg_inds.shape[0] < self.min_area:
-                seg_ids[seg_inds[:, 0], seg_inds[:, 1]] = 255
-        #
+            seg_points = cam_points[seg_inds[:, 0], seg_inds[:, 1]]
 
-        seg_id_msg = self.bridge.cv2_to_imgmsg(seg_ids)
+            non_nan_inds = np.argwhere(~np.isnan(seg_points).any(axis=1))[:, 0]
+            non_nan_seg_points = seg_points[non_nan_inds]
+
+            if non_nan_seg_points.shape[0] == 0:
+                continue
+
+            db = DBSCAN(eps=self.db_eps, min_samples=self.db_min_samples).fit(non_nan_seg_points)
+            labels = db.labels_
+
+            for label_id in np.unique(labels):
+                if label_id == -1:
+                    continue
+
+                label_inds = np.argwhere(labels == label_id)[:, 0]
+                non_nan_label_inds = non_nan_inds[label_inds]
+                seg_label_inds = seg_inds[non_nan_label_inds]
+
+                if seg_label_inds.shape[0] < self.min_area:
+                    continue
+
+                clustered_seg_ids[seg_label_inds[:, 0], seg_label_inds[:, 1]] = curr_id
+                curr_id += 1
+
+        seg_id_msg = self.bridge.cv2_to_imgmsg(clustered_seg_ids)
         seg_id_msg.header = ros_image.header
 
         self.pub.publish(seg_id_msg)
@@ -99,12 +132,20 @@ def run_segmentor_service():
     bg_thresh = rospy.get_param("~bg_thresh")
     min_area = rospy.get_param("~min_area")
     shuffle_seg = rospy.get_param("~shuffle_seg")
+    db_eps = rospy.get_param("~db_eps")
+    db_min_samples = rospy.get_param("~db_min_samples")
 
     pub = rospy.Publisher('/segmented_image', Image, queue_size=5)
 
-    segmentor = ImageSegmentor(pub, hsv_thresh, bg_thresh, min_area, shuffle_seg)
+    segmentor = ImageSegmentor(pub, hsv_thresh, bg_thresh, min_area, shuffle_seg,
+                               db_eps, db_min_samples)
 
-    sub = rospy.Subscriber('/theia/left/image_rect_color', Image, segmentor.segment_image, queue_size=5)
+    #sub = rospy.Subscriber('/theia/left/image_rect_color', Image, segmentor.segment_image, queue_size=5)
+    image_sub = message_filters.Subscriber('/theia/left/image_rect_color', Image, queue_size=2)
+    pointcloud_sub = message_filters.Subscriber('/pointcloud', PointCloud2, queue_size=2)
+
+    ts = message_filters.ApproximateTimeSynchronizer([image_sub, pointcloud_sub], 6, 0.1)
+    ts.registerCallback(segmentor.segment_image)
 
     rospy.spin()
 

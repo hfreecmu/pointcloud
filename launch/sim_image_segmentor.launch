@@ -6,10 +6,16 @@
 <arg name="min_area" default="100"/>
 <arg name="shuffle_seg" default="true"/>
 
+<arg name="db_eps" default="0.01"/>
+<arg name="db_min_samples" default="20"/>
+
 <node pkg="pointcloud" type="sim_image_segmentor.py" name="fruitlet_segment_node" output="screen">
     <param name="hsv_thresh" type="double" value="$(arg hsv_thresh)" />
     <param name="bg_thresh" type="double" value="$(arg bg_thresh)" />
     <param name="min_area" type="int" value="$(arg min_area)" />
     <param name="shuffle_seg" type="boolean" value="$(arg shuffle_seg)" />
+
+    <param name="db_eps" type="double" value="$(arg db_eps)" />
+    <param name="db_min_samples" type="int" value="$(arg db_min_samples)" />
 </node>
 </launch>
