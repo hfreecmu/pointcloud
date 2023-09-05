@@ -92,6 +92,11 @@ class ImageSegmentor:
                 continue
 
             seg_inds = np.argwhere(seg_ids == id)
+
+            if seg_inds.shape[0] > 20000:
+                rospy.logwarn('ISSUE SEG HAPPENED HERE. SKIPPING BUT MAY NEED TO RETUNE.')
+                continue
+
             seg_points = cam_points[seg_inds[:, 0], seg_inds[:, 1]]
 
             non_nan_inds = np.argwhere(~np.isnan(seg_points).any(axis=1))[:, 0]
