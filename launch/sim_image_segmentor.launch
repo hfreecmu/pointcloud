@@ -3,7 +3,7 @@
 
 <arg name="hsv_thresh" default="0.15"/>
 <arg name="bg_thresh" default="0.15"/>
-<arg name="min_area" default="100"/>
+<arg name="min_area" default="20"/>
 <arg name="shuffle_seg" default="true"/>
 
 <arg name="db_eps" default="0.01"/>
